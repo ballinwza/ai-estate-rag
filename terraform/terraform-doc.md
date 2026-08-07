@@ -15,3 +15,35 @@
 ├─► Step 4: Build & Push Docker Image ไปยัง Artifact Registry
 └─► Step 5: Deploy Image ขึ้น Cloud Run (--allow-unauthenticated)
 ```
+
+---
+
+## Terraform
+
+### Use Guide
+
+### Manualy
+
+1. Install Terraform follow this command:
+   - Windows
+     - By Chocolatey `choco install terraform`
+     - By Winget (recommend) `winget install HashiCorp.Terraform`
+   - MacOS
+     - Homebrew `brew tap hashicorp/tap` and `brew install hashicorp/tap/terraform`
+
+2. Checking Terraform version `terraform -v`
+
+3. `cd ./terraform`
+4. `terraform init` -> Must generate "Terraform has been successfully initialized!"
+
+#### Or using Make command after 2
+
+`make terra-init`
+
+---
+
+### Apply Guide first time run GCloud service (Optional)
+
+- `terrform plan` check status
+- `terraform apply`
+- `terraform validate`

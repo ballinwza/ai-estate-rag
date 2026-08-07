@@ -1,6 +1,13 @@
 # 1. Enable Required Service APIs
-resource "google_project_service" "iam_credentials_api" {
-  service            = "cloudresourcemanager.googleapis.com"
+resource "google_project_service" "required_apis" {
+  for_each = toset([
+    "cloudresourcemanager.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "run.googleapis.com"
+  ])
+
+  service            = each.value
   disable_on_destroy = false
 }
 

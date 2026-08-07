@@ -9,6 +9,10 @@ resource "google_cloud_run_v2_service" "app" {
   location = var.gcp_region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
+  # เลือกแบบใดแบบหนึ่ง:
+  # "INGRESS_TRAFFIC_INTERNAL_ONLY" -> เรียกใช้ได้เฉพาะจากภายใน VPC/GCP เดียวกัน
+  # "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" -> เข้าถึงได้ผ่าน Cloud Load Balancer เท่านั้น สำหรับ Production
+  # ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
   template {
     containers {
       # ใช้ Image เริ่มต้นไปก่อน แล้วค่อยให้ GitHub Actions สั่ง Deploy container จริงทับทีหลัง
@@ -22,6 +26,7 @@ resource "google_cloud_run_v2_service" "app" {
 }
 
 # 3. Allow unauthenticated access (อ้างอิงจากตัว Service ด้านบน)
+# Closing on Production
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
   project  = var.gcp_project_id
   location = google_cloud_run_v2_service.app.location
