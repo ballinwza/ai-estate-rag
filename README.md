@@ -1,3 +1,4 @@
+```
 ai-estate-rag/
 ├── app/
 │   ├── api/                     # Controller / Routing Layer (FastAPI)
@@ -50,3 +51,4 @@ ai-estate-rag/
 ├── Dockerfile                   # Production Dockerfile
 ├── main.py                      # FastAPI Application Entrypoint
 └── requirements.txt             # Python Dependencies
+```
