@@ -1,0 +1,20 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Terraform (อนุญาตให้จัดรูปแบบไฟล์ .tf ได้ ยกเว้นไฟล์ State และ Cache)
+terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Git & Misc
+.git/
+.vscode/
+dist/
+build/

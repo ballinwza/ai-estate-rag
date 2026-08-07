@@ -1,0 +1,53 @@
+name: Deploy Backend to GCP Cloud Run on Tag Push
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # ทำงานเมื่อ push tag เช่น v1.0.0, v1.0.1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write # จำเป็นสำหรับการทำ GCP Workload Identity Federation
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Extract Tag Name
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_URI="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }}"
+          IMAGE_LATEST="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:latest"
+
+          # Build พร้อมใส่ Tag เวอร์ชัน และ Tag latest
+          docker build -t $IMAGE_URI -t $IMAGE_LATEST .
+          docker push $IMAGE_URI
+          docker push $IMAGE_LATEST
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.APP_NAME }} \
+            --image=${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --set-env-vars GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}",MONGODB_URI="${{ secrets.MONGODB_URI }}"
