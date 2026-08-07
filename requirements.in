@@ -1,0 +1,21 @@
+# Web Framework & Server
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+
+# Database & Persistence (MongoDB Async Driver)
+motor
+pymongo
+
+# LLM & Framework (LangChain & Gemini Integrations)
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+
+# Document Processing & Utilities
+pypdf
+python-dotenv
+requests
