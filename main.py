@@ -1,14 +1,29 @@
 import uvicorn
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
-# นำเข้า Hello Router จากชั้น api
-from app.api.v1.endpoints.hello import router as hello_router
+from app.api.v1.api import api_router
+from app.core.mongodb import close_mongo_connection, connect_to_mongo
+from app.core.pinecone import close_pinecone_connection, connect_to_pinecone
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. ทำการเชื่อมต่อ Database เมื่อ Server เริ่มทำงาน
+    await connect_to_mongo()
+    await connect_to_pinecone()
+    yield
+    # 2. ปิดการเชื่อมต่อเมื่อ Server ปิดตัวลง
+    await close_mongo_connection()
+    await close_pinecone_connection()
+
 
 app = FastAPI(
     title="Enterprise RAG Backend API",
     description="Backend Service (Clean Architecture) - FastAPI + LangChain + MongoDB",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # ตั้งค่า CORS Middleware สำหรับรองรับ Frontend/External Client
@@ -20,17 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register Endpoints
-app.include_router(hello_router, prefix="/api/v1", tags=["Health & Demo"])
-
-
-@app.get("/", tags=["Root"])
-async def root():
-    return {
-        "message": "API Service is running properly",
-        "docs": "/docs",  # Swagger UI Path
-    }
-
+app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

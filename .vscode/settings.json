@@ -31,6 +31,14 @@
   // สำหรับไฟล์ Python ให้ใช้ Ruff
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true
-  }
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+  },
+
+  "python.analysis.extraPaths": [
+    "."
+  ],
+  "python.analysis.importFormat": "absolute"
 }

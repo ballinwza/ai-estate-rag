@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from pydantic import BaseModel
 
 # สร้าง Router สำหรับ API V1
-router = APIRouter()
+health_router = APIRouter()
 
 
 # DTO สำหรับ Hello World Response (สอดคล้องกับ schemas/)
@@ -11,8 +11,8 @@ class HelloWorldResponse(BaseModel):
     status: str
 
 
-@router.get(
-    "/hello",
+@health_router.get(
+    "/health",
     response_model=HelloWorldResponse,
     status_code=status.HTTP_200_OK,
     summary="Hello World Endpoint",

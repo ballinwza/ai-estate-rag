@@ -9,6 +9,9 @@ python-multipart
 motor
 pymongo
 
+# Pinecone
+pinecone
+
 # LLM & Framework (LangChain & Gemini Integrations)
 langchain
 langchain-core
