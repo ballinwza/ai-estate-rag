@@ -9,8 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    environment: a-estate-rag
-
     permissions:
       contents: read
       id-token: write
@@ -27,6 +25,15 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+
+      - name: Debug Environment Variables
+        run: |
+          echo "Checking Project ID length: ${#GCP_PROJECT_ID}"
+          echo "GCP Region: ${{ secrets.GCP_REGION }}"
+          echo "App Name: ${{ secrets.APP_NAME }}"
+          echo "GAR Repo: ${{ secrets.GCP_GAR_REPO }}"
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
@@ -56,7 +63,6 @@ jobs:
           MONGODB_URI=${{ secrets.MONGODB_URI }},\
           PROJECT_NAME=${{ secrets.PROJECT_NAME }},\
           ENVIRONMENT=${{ secrets.ENVIRONMENT }},\
-          DEBUG=False,\
           MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }},\
           LLM_MODEL_NAME=${{ secrets.LLM_MODEL_NAME }},\
           EMBEDDING_MODEL_NAME=${{ secrets.EMBEDDING_MODEL_NAME }},\
