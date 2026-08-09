@@ -5,7 +5,7 @@ resource "google_project_service" "cloud_run_api" {
 
 # 2. สร้าง Cloud Run Service (ตัวแอป)
 resource "google_cloud_run_v2_service" "app" {
-  name     = var.app_name
+  name     = "${var.app_name}-${var.environment}"
   location = var.gcp_region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
@@ -16,10 +16,13 @@ resource "google_cloud_run_v2_service" "app" {
   template {
     containers {
       # ใช้ Image เริ่มต้นไปก่อน แล้วค่อยให้ GitHub Actions สั่ง Deploy container จริงทับทีหลัง
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      image = "${var.registry_path}:${var.registry_tags}"
+      ports {
+        container_port = 8000
+      }
     }
   }
-
+  deletion_protection = false
   depends_on = [
     google_project_service.cloud_run_api
   ]

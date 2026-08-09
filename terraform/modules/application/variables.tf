@@ -17,3 +17,18 @@ variable "app_name" {
   type        = string
   description = "Name of the application"
 }
+
+variable "environment" {
+  type        = string
+  description = "Environment of application"
+}
+
+variable "registry_path" {
+  type        = string
+  description = "registry_name"
+}
+
+variable "registry_tags" {
+  type        = string
+  description = "registry_tags"
+}

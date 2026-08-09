@@ -13,21 +13,21 @@ resource "google_project_service" "required_apis" {
 
 # 2. Service Account for GitHub Actions
 resource "google_service_account" "github_actions_sa" {
-  account_id   = "gh-actions-${var.app_name}"
+  account_id   = "gh-actions-${var.app_name}-${var.environment}"
   display_name = "Service Account for GitHub Actions CI/CD"
 }
 
 # 3. Workload Identity Pool
 resource "google_iam_workload_identity_pool" "github_pool" {
-  workload_identity_pool_id = "github-actions-pool"
-  display_name              = "GitHub Actions Pool"
+  workload_identity_pool_id = "github-actions-pool-${var.environment}"
+  display_name              = "GitHub Actions Pool ${var.environment}"
 }
 
 # 4. Workload Identity Provider for GitHub OIDC
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-provider"
-  display_name                       = "GitHub Provider"
+  display_name                       = "GitHub Provider ${var.environment}"
 
   attribute_mapping = {
     "google.subject"       = "assertion.sub"

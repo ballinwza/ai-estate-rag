@@ -6,7 +6,7 @@ resource "google_project_service" "artifact_registry_api" {
 resource "google_artifact_registry_repository" "docker_repo" {
   depends_on    = [google_project_service.artifact_registry_api]
   location      = var.gcp_region
-  repository_id = "${var.app_name}-repo"
+  repository_id = "${var.app_name}-repo-${var.environment}"
   description   = "Docker repository for Backend FastAPI Application"
   format        = "DOCKER"
 
