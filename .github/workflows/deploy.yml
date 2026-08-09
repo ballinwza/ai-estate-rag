@@ -44,7 +44,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_URI="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}"
+          IMAGE_URI="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }}"
           IMAGE_LATEST="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:latest"
 
           docker build -t $IMAGE_URI -t $IMAGE_LATEST .
@@ -54,8 +54,9 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ secrets.APP_NAME }} \
-            --image=${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }} \
+            --image=${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }} \
             --region=${{ secrets.GCP_REGION }} \
+            --port=8000 \
             --platform=managed \
             --allow-unauthenticated \
             --set-env-vars "\
