@@ -3,15 +3,17 @@ name: Deploy Backend to GCP Cloud Run on Tag Push
 on:
   push:
     tags:
-      - "v*.*.*" # ทำงานเมื่อ push tag เช่น v1.0.0, v1.0.1
+      - "v*.*.*"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    environment: a-estate-rag
+
     permissions:
       contents: read
-      id-token: write # จำเป็นสำหรับการทำ GCP Workload Identity Federation
+      id-token: write
 
     steps:
       - name: Checkout Code
@@ -31,14 +33,13 @@ jobs:
 
       - name: Extract Tag Name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_URI="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }}"
+          IMAGE_URI="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}"
           IMAGE_LATEST="${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:latest"
 
-          # Build พร้อมใส่ Tag เวอร์ชัน และ Tag latest
           docker build -t $IMAGE_URI -t $IMAGE_LATEST .
           docker push $IMAGE_URI
           docker push $IMAGE_LATEST
@@ -46,8 +47,21 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ secrets.APP_NAME }} \
-            --image=${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }}:${{ env.VERSION }} \
+            --image=${{ secrets.GCP_GAR_REPO }}/${{ secrets.APP_NAME }} \
             --region=${{ secrets.GCP_REGION }} \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}",MONGODB_URI="${{ secrets.MONGODB_URI }}"
+            --set-env-vars "\
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},\
+          MONGODB_URI=${{ secrets.MONGODB_URI }},\
+          PROJECT_NAME=${{ secrets.PROJECT_NAME }},\
+          ENVIRONMENT=${{ secrets.ENVIRONMENT }},\
+          DEBUG=False,\
+          MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }},\
+          LLM_MODEL_NAME=${{ secrets.LLM_MODEL_NAME }},\
+          EMBEDDING_MODEL_NAME=${{ secrets.EMBEDDING_MODEL_NAME }},\
+          GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},\
+          GCP_REGION=${{ secrets.GCP_REGION }},\
+          PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }},\
+          PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }},\
+          PINECONE_DIMENSION=${{ secrets.PINECONE_DIMENSION }}"

@@ -19,8 +19,8 @@ resource "google_service_account" "github_actions_sa" {
 
 # 3. Workload Identity Pool
 resource "google_iam_workload_identity_pool" "github_pool" {
-  workload_identity_pool_id = "github-actions-pool"
-  display_name              = "GitHub Actions Pool"
+  workload_identity_pool_id = "github-actions-pool-ai-rag"
+  display_name              = "GitHub Actions Pool ai rag"
 }
 
 # 4. Workload Identity Provider for GitHub OIDC

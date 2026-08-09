@@ -6,10 +6,10 @@ terraform {
       version = "~> 5.0"
     }
   }
-  backend "gcs" {
-    bucket = "tr-ai-estate-ragv1" # ชื่อ Bucket บน GCP สำหรับเก็บ State
-    prefix = "terraform/state"
-  }
+  # backend "gcs" {
+  #   bucket = "tr-ai-estate-ragv1" # ชื่อ Bucket บน GCP สำหรับเก็บ State
+  #   prefix = "terraform/state"
+  # }
 }
 
 provider "google" {

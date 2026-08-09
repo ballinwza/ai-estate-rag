@@ -11,8 +11,12 @@ from app.core.pinecone import close_pinecone_connection, connect_to_pinecone
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. ทำการเชื่อมต่อ Database เมื่อ Server เริ่มทำงาน
-    await connect_to_mongo()
-    await connect_to_pinecone()
+    try:
+        await connect_to_mongo()
+        await connect_to_pinecone()
+    except Exception as e:
+        print(f"❌ Database connection failed during startup: {e}")
+        # สามารถเลือก raise e หรือปล่อยให้แอปขึ้นมาก่อนเพื่อดู Log ได้
     yield
     # 2. ปิดการเชื่อมต่อเมื่อ Server ปิดตัวลง
     await close_mongo_connection()
