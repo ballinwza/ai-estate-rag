@@ -14,7 +14,7 @@ document_router = APIRouter(
     "/upload",
     response_model=ProcessDocumentOutput,
     status_code=status.HTTP_201_CREATED,
-    summary="อัปโหลดเอกสาร PDF หรือรูปภาพอสังหาฯ",
+    summary="อัปโหลดเอกสาร PDF หรือรูปภาพ",
     description="อ่านและสกัดข้อความจากเอกสาร/รูปภาพ เพื่อนำข้อมูลไปปรับใช้กับระบบ RAG และบันทึกลง Database",
 )
 async def upload_document(

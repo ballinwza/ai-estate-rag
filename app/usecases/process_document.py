@@ -4,11 +4,15 @@ from datetime import datetime, timezone
 from fastapi import UploadFile
 
 from app.domain.entities.document import DocumentCreateSchema
-from app.domain.repositories.mongodb_repository import MongoDocumentRepository
-from app.domain.repositories.pinecone_repository import PineconeRepository
 from app.infrastructure.llm.chunker import ChunkerService
 from app.infrastructure.llm.embedder import EmbedderService
-from app.infrastructure.llm.file_parser import FileParserService
+from app.infrastructure.llm.llm import LlmService
+from app.infrastructure.persistence.mongodb.document_repository import (
+    MongoDocumentRepository,
+)
+from app.infrastructure.persistence.vector_store.pinecone_repository import (
+    PineconeRepository,
+)
 from app.schemas.document import ProcessDocumentOutput
 
 logger = logging.getLogger(__name__)
@@ -21,7 +25,7 @@ class ProcessDocumentUseCase:
         self,
         mongo_repo: MongoDocumentRepository,
         pinecone_repo: PineconeRepository,
-        parser_service: FileParserService,
+        parser_service: LlmService,
         embedder_service: EmbedderService,
         chunker_service: ChunkerService,
     ) -> None:

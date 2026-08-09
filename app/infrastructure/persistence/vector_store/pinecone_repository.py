@@ -1,15 +1,13 @@
+import asyncio
 from typing import Any
 
 from pinecone import GrpcIndex, Index
 
-from app.domain.repositories.pinecone_repository import PineconeRepository
 
-
-class PineconeRepositoryImpl(PineconeRepository):
+class PineconeRepository:
     """Implementation สำหรับบันทึกเอกสารลง Pinecone DB"""
 
     def __init__(self, pc_index: Index | GrpcIndex) -> None:
-        # self.pc = database
         self.index = pc_index
 
     async def upsert_vectors(
@@ -56,3 +54,26 @@ class PineconeRepositoryImpl(PineconeRepository):
             include_metadata=True,
         )
         return response.to_dict().get("matches", [])
+
+    async def search_similar_document_ids(
+        self, query_vector: list[float], top_k: int = 5
+    ) -> list[str]:
+        # รัน Sync function บน Executor เพื่อให้รองรับ Async/Await
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: self.index.query(
+                vector=query_vector,
+                top_k=top_k,
+                include_metadata=True,
+                namespace="__default__",
+            ),
+        )
+
+        matched_doc_ids = []
+        # 2. ดึงค่าจาก field 'document_id' ใน metadata
+        for match in response.matches:
+            if match.metadata and "document_id" in match.metadata:
+                matched_doc_ids.append(str(match.metadata["document_id"]))
+
+        return matched_doc_ids

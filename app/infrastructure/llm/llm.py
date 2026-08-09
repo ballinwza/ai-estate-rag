@@ -8,11 +8,15 @@ from fastapi import UploadFile
 from langchain.chat_models import BaseChatModel
 
 
-class FileParserService:
+class LlmService:
     """Service สำหรับสกัดข้อความจากเอกสาร PDF หรือรูปภาพ"""
 
-    def __init__(self, llm: BaseChatModel | None = None) -> None:
+    def __init__(self, llm: BaseChatModel):
         self.llm = llm
+
+    async def get_llm_answer(self, prompt: str):
+        response = await self.llm.ainvoke(prompt)
+        return response
 
     async def parse_file(self, file: UploadFile) -> dict[str, Any]:
         content = await file.read()
