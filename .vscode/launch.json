@@ -1,18 +1,35 @@
+// {
+//   "version": "0.2.0",
+//   "configurations": [
+//     {
+//       "name": "Python: FastAPI",
+//       "type": "debugpy",
+//       "request": "launch",
+//       "module": "uvicorn",
+//       "args": [
+//         "main:app",
+//         "--reload"
+//       ],
+//       "jinja": true,
+//       "env": {
+//         "PYTHONPATH": "app"
+//       }
+//     }
+//   ]
+// }
+
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: FastAPI",
+      "name": "Python: gRPC Server",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "main:app",
-        "--reload"
-      ],
-      "jinja": true,
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
       "env": {
-        "PYTHONPATH": "app"
+        "PYTHONPATH": "${workspaceFolder}"
       }
     }
   ]
