@@ -58,6 +58,12 @@ google-genai==2.17.0
     # via langchain-google-genai
 greenlet==3.5.4
     # via sqlalchemy
+grpcio==1.83.0
+    # via
+    #   -r requirements.in
+    #   grpcio-tools
+grpcio-tools==1.83.0
+    # via -r requirements.in
 h11==0.16.0
     # via
     #   httpcore
@@ -158,6 +164,10 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
+protobuf==7.35.1
+    # via
+    #   -r requirements.in
+    #   grpcio-tools
 pyasn1==0.6.4
     # via pyasn1-modules
 pyasn1-modules==0.4.2
@@ -234,6 +244,7 @@ typing-extensions==4.16.0
     #   anyio
     #   fastapi
     #   google-genai
+    #   grpcio
     #   langchain-core
     #   langchain-protocol
     #   langsmith
@@ -271,3 +282,6 @@ yarl==1.24.5
     # via aiohttp
 zstandard==0.25.0
     # via langsmith
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package chat.v1;
+
+// Service สำหรับจัดการระบบสนทนา AI
+service ChatGRPC {
+  rpc Query (ChatRequest) returns (ChatResponse) {}
+}
+
+message ChatRequest {
+  string question = 1; // เช่น "สรุปเอกสาร"
+}
+
+message ChatResponse {
+  string message = 1;  // ข้อความแจ้งสถานะการทำงาน
+}

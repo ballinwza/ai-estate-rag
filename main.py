@@ -4,6 +4,7 @@ from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
+from app.core.grpc_server import start_grpc_server
 from app.core.mongodb import close_mongo_connection, connect_to_mongo
 from app.core.pinecone import close_pinecone_connection, connect_to_pinecone
 
@@ -14,6 +15,8 @@ async def lifespan(app: FastAPI):
     try:
         await connect_to_mongo()
         await connect_to_pinecone()
+        grpc_server = await start_grpc_server(port=50052)
+
     except Exception as e:
         print(f"❌ Database connection failed during startup: {e}")
         # สามารถเลือก raise e หรือปล่อยให้แอปขึ้นมาก่อนเพื่อดู Log ได้
@@ -21,6 +24,7 @@ async def lifespan(app: FastAPI):
     # 2. ปิดการเชื่อมต่อเมื่อ Server ปิดตัวลง
     await close_mongo_connection()
     await close_pinecone_connection()
+    await grpc_server.stop(grace=5)
 
 
 app = FastAPI(

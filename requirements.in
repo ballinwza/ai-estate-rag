@@ -22,3 +22,9 @@ langchain-google-genai
 pypdf
 python-dotenv
 requests
+
+# GRPC
+grpcio
+grpcio-tools
+protobuf
+grpc-stubs
