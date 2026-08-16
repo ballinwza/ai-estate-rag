@@ -1,6 +1,7 @@
-import ast
 import base64
 import io
+import json
+import mimetypes
 from typing import Any
 
 import pypdf
@@ -24,20 +25,68 @@ class LlmService:
         filename = (file.filename or "").lower()
 
         if "pdf" in file_type or filename.endswith(".pdf"):
-            return await self._parse_pdf(content)
+            return self._parse_pdf_sync(content)
         elif "image" in file_type or filename.endswith((".png", ".jpg", ".jpeg")):
             return await self._parse_image(content, file_type or "image/jpeg")
         else:
             raise ValueError("รองรับเฉพาะไฟล์ประเภท PDF และรูปภาพ (PNG, JPG, JPEG) เท่านั้น")
 
-    async def _parse_pdf(self, content: bytes) -> dict[str, Any]:
-        pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+    async def parse_chunk_file(
+        self,
+        file_input: bytes | bytearray | io.BytesIO,
+        filename: str,
+        content_type: str,
+    ) -> dict[str, Any]:
+        """
+        สกัดข้อความจากข้อมูล binary (bytes, bytearray, io.BytesIO)
+        รองรับไฟล์ PDF และ รูปภาพ
+        """
+        # 1. แปลงข้อมูลอินพุตให้เป็น bytes ก้อนเดียว
+        if isinstance(file_input, io.BytesIO):
+            content = file_input.getvalue()
+        elif isinstance(file_input, (bytes, bytearray)):
+            content = bytes(file_input)
+        else:
+            raise ValueError(
+                "file_input ต้องเป็นประเภท bytes, bytearray หรือ io.BytesIO เท่านั้น"
+            )
+
+        filename_lower = filename.lower()
+        file_type = content_type or ""
+
+        # 2. คาดเดา Mime Type จากนามสกุลไฟล์ หากไม่ได้ระบุ content_type มา
+        if not file_type and filename:
+            guessed_type, _ = mimetypes.guess_type(filename)
+            file_type = guessed_type or ""
+
+        # 3. แยกเส้นทางการ Parse ตามประเภทไฟล์
+        if "pdf" in file_type or filename_lower.endswith(".pdf"):
+            return self._parse_pdf_sync(content)
+        elif "image" in file_type or filename_lower.endswith((".png", ".jpg", ".jpeg")):
+            # Fallback Mime Type สำหรับรูปภาพ
+            mime = file_type if "image" in file_type else "image/jpeg"
+            return await self._parse_image(content, mime)
+        else:
+            raise ValueError("รองรับเฉพาะไฟล์ประเภท PDF และรูปภาพ (PNG, JPG, JPEG) เท่านั้น")
+
+    def _parse_pdf_sync(self, content: bytes) -> dict[str, Any]:
+        """
+        Helper function สำหรับสกัดข้อความจาก PDF (Synchronous)
+        """
+        try:
+            pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+        except Exception as e:
+            raise ValueError(f"ไม่สามารถอ่านไฟล์ PDF ได้ ไฟล์อาจชำรุดหรือติดรหัสผ่าน: {str(e)}")
 
         pages_data = []
         full_text_list = []
 
         for idx, page in enumerate(pdf_reader.pages):
-            text = page.extract_text() or ""
+            try:
+                text = page.extract_text() or ""
+            except Exception:
+                text = ""
+
             text_cleaned = text.strip()
 
             if text_cleaned:
@@ -79,33 +128,23 @@ class LlmService:
         }
 
         response = await self.llm.ainvoke([message])
-        res_content = str(response.content).strip()
+        if hasattr(response, "content"):
+            extracted_text = str(response.content).strip()
+        else:
+            extracted_text = str(response).strip()
 
-        extracted_text = ""
-
-        # เช็คว่าถ้าเป็น str ให้ลองแปลงเป็น List/Dict
-        if isinstance(res_content, str):
+        # กรณี LLM คืนค่ามาเป็น JSON String หรือ List String แบบหลวมๆ
+        if extracted_text.startswith("[") or extracted_text.startswith("{"):
             try:
-                # แปลง String "[{'type': 'text', ...}]" ให้เป็น Python List จริงๆ
-                parsed_data = ast.literal_eval(res_content)
-
-                if isinstance(parsed_data, list) and len(parsed_data) > 0:
-                    # ดึงเอาเฉพาะฟิลด์ 'text' ออกมา
-                    extracted_text = parsed_data[0].get("text", "")
-                else:
-                    extracted_text = res_content
-            except (ValueError, SyntaxError):
-                # ถ้าแปลงไม่ได้ ให้ใช้ค่า res_content ตรงๆ
-                extracted_text = res_content
-
-        elif isinstance(res_content, list) and len(res_content) > 0:
-            extracted_text = (
-                res_content[0].get("text", "")
-                if isinstance(res_content[0], dict)
-                else str(res_content[0])
-            )
-
-        extracted_text = extracted_text.strip()
+                parsed = json.loads(extracted_text)
+                if (
+                    isinstance(parsed, list)
+                    and len(parsed) > 0
+                    and isinstance(parsed[0], dict)
+                ):
+                    extracted_text = parsed[0].get("text", extracted_text)
+            except Exception:
+                pass  # หาก parse json ไม่ผ่าน ให้ใช้ค่าเดิมตรงๆ
 
         return {
             "total_pages": 1,

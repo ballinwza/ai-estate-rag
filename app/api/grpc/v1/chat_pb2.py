@@ -22,19 +22,34 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x07\x63hat.v1\"\x1f\n\x0b\x43hatRequest\x12\x10\n\x08question\x18\x01 \x01(\t\"\x1f\n\x0c\x43hatResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2B\n\x08\x43hatGRPC\x12\x36\n\x05Query\x12\x14.chat.v1.ChatRequest\x1a\x15.chat.v1.ChatResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x07\x63hat.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1f\n\x0b\x43hatRequest\x12\x10\n\x08question\x18\x01 \x01(\t\"\x1f\n\x0c\x43hatResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"2\n\x0bPdfMetadata\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x11\n\tfile_size\x18\x02 \x01(\x03\"Z\n\x10UploadPdfRequest\x12(\n\x08metadata\x18\x01 \x01(\x0b\x32\x14.chat.v1.PdfMetadataH\x00\x12\x14\n\nchunk_data\x18\x02 \x01(\x0cH\x00\x42\x06\n\x04\x64\x61ta\"F\n\x11UploadPdfResponse\x12\x0f\n\x07\x66ile_id\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\x0f\n\x07message\x18\x03 \x01(\t\"X\n\x0c\x46ileMetadata\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x12\n\nchatbot_id\x18\x02 \x01(\t\x12\x10\n\x08\x66ilename\x18\x03 \x01(\t\x12\x11\n\tfile_type\x18\x04 \x01(\t\"e\n\x17UploadFileStreamRequest\x12)\n\x08metadata\x18\x01 \x01(\x0b\x32\x15.chat.v1.FileMetadataH\x00\x12\x14\n\nchunk_data\x18\x02 \x01(\x0cH\x00\x42\t\n\x07payload\"\xbc\x01\n\x18UploadFileStreamResponse\x12\x0f\n\x07\x66ile_id\x18\x01 \x01(\t\x12#\n\x06status\x18\x02 \x01(\x0e\x32\x13.chat.v1.FileStatus\x12\x14\n\x0ctotal_chunks\x18\x03 \x01(\x05\x12\x13\n\x0btotal_bytes\x18\x04 \x01(\x03\x12\x0f\n\x07message\x18\x05 \x01(\t\x12.\n\ncreated_at\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp*4\n\nFileStatus\x12\x0b\n\x07PENDING\x10\x00\x12\r\n\tCOMPLETED\x10\x01\x12\n\n\x06\x46\x41ILED\x10\x02\x32\xed\x01\n\x08\x43hatGRPC\x12\x36\n\x05Query\x12\x14.chat.v1.ChatRequest\x1a\x15.chat.v1.ChatResponse\"\x00\x12\x44\n\tUploadPdf\x12\x19.chat.v1.UploadPdfRequest\x1a\x1a.chat.v1.UploadPdfResponse(\x01\x12\x63\n\x1aUploadFileStramMultiTenant\x12 .chat.v1.UploadFileStreamRequest\x1a!.chat.v1.UploadFileStreamResponse(\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'chat_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_CHATREQUEST']._serialized_start=23
-  _globals['_CHATREQUEST']._serialized_end=54
-  _globals['_CHATRESPONSE']._serialized_start=56
-  _globals['_CHATRESPONSE']._serialized_end=87
-  _globals['_CHATGRPC']._serialized_start=89
-  _globals['_CHATGRPC']._serialized_end=155
+  _globals['_FILESTATUS']._serialized_start=722
+  _globals['_FILESTATUS']._serialized_end=774
+  _globals['_CHATREQUEST']._serialized_start=56
+  _globals['_CHATREQUEST']._serialized_end=87
+  _globals['_CHATRESPONSE']._serialized_start=89
+  _globals['_CHATRESPONSE']._serialized_end=120
+  _globals['_PDFMETADATA']._serialized_start=122
+  _globals['_PDFMETADATA']._serialized_end=172
+  _globals['_UPLOADPDFREQUEST']._serialized_start=174
+  _globals['_UPLOADPDFREQUEST']._serialized_end=264
+  _globals['_UPLOADPDFRESPONSE']._serialized_start=266
+  _globals['_UPLOADPDFRESPONSE']._serialized_end=336
+  _globals['_FILEMETADATA']._serialized_start=338
+  _globals['_FILEMETADATA']._serialized_end=426
+  _globals['_UPLOADFILESTREAMREQUEST']._serialized_start=428
+  _globals['_UPLOADFILESTREAMREQUEST']._serialized_end=529
+  _globals['_UPLOADFILESTREAMRESPONSE']._serialized_start=532
+  _globals['_UPLOADFILESTREAMRESPONSE']._serialized_end=720
+  _globals['_CHATGRPC']._serialized_start=777
+  _globals['_CHATGRPC']._serialized_end=1014
 # @@protoc_insertion_point(module_scope)

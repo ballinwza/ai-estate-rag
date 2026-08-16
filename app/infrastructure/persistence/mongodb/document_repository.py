@@ -3,7 +3,8 @@ from typing import Any
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pymongo.results import DeleteResult
+from pymongo import ReturnDocument
+from pymongo.results import DeleteResult, InsertOneResult, UpdateResult
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,50 @@ class MongoDocumentRepository:
     def __init__(self, database: AsyncIOMotorDatabase) -> None:
         self.collection = database["documents"]
 
+    async def insert_document(self, document_data: dict) -> InsertOneResult:
+        result = await self.collection.insert_one(document_data)
+        return result
+
+    async def update_by_filer(self, filter: dict, document_data: dict) -> UpdateResult:
+        update_data = {"$set": document_data}
+
+        result = await self.collection.update_one(filter, update_data)
+        return result
+
+    async def update_by_id(self, id: str, document_data: dict) -> UpdateResult:
+        filter_query = {"_id": ObjectId(id)}
+        update_data = {"$set": document_data}
+
+        result = await self.collection.update_one(filter_query, update_data)
+
+        return result
+
+    async def update_by_filter_response(
+        self, filter: dict, document_data: dict
+    ) -> dict | None:
+        update_data = {"$set": document_data}
+
+        result = await self.collection.find_one_and_update(
+            filter,
+            update_data,
+            return_document=ReturnDocument.AFTER,
+        )
+        result["_id"] = str(result["_id"])
+        return result
+
+    async def update_by_id_response(self, id: str, document_data: dict) -> dict | None:
+        filter_query = {"_id": ObjectId(id)}
+        update_data = {"$set": document_data}
+
+        result = await self.collection.find_one_and_update(
+            filter_query,
+            update_data,
+            return_document=ReturnDocument.AFTER,
+        )
+        result["_id"] = str(result["_id"])
+        return result
+
+    # Un generic
     async def save_document(self, document_data: dict) -> str:
         result = await self.collection.insert_one(document_data)
         return str(result.inserted_id)

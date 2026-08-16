@@ -1,16 +1,69 @@
 syntax = "proto3";
 
 package chat.v1;
+import "google/protobuf/timestamp.proto";
 
 // Service สำหรับจัดการระบบสนทนา AI
 service ChatGRPC {
   rpc Query (ChatRequest) returns (ChatResponse) {}
+  rpc UploadPdf (stream UploadPdfRequest) returns (UploadPdfResponse);
+  rpc UploadFileStramMultiTenant (stream UploadFileStreamRequest) returns (UploadFileStreamResponse);
 }
 
+// Query
 message ChatRequest {
   string question = 1; // เช่น "สรุปเอกสาร"
 }
 
 message ChatResponse {
   string message = 1;  // ข้อความแจ้งสถานะการทำงาน
+}
+
+// UploadPdf
+message PdfMetadata {
+  string filename = 1;
+  int64  file_size = 2;
+}
+
+message UploadPdfRequest {
+  oneof data {
+    PdfMetadata metadata = 1;
+    bytes chunk_data     = 2; 
+  }
+}
+
+message UploadPdfResponse {
+  string file_id = 1;
+  bool success   = 2;
+  string message = 3;
+}
+
+// UploadFileStramMultiTenant
+enum FileStatus {
+  PENDING = 0;
+  COMPLETED = 1;
+  FAILED = 2; 
+}
+
+message FileMetadata {
+  string user_id = 1;
+  string chatbot_id = 2;
+  string filename = 3;
+  string file_type = 4; 
+}
+
+message UploadFileStreamRequest {
+  oneof payload {
+    FileMetadata metadata = 1; 
+    bytes chunk_data = 2;     
+  }
+}
+
+message UploadFileStreamResponse {
+  string file_id = 1;
+  FileStatus status = 2;
+  int32 total_chunks = 3;
+  int64 total_bytes = 4;
+  string message = 5;
+  google.protobuf.Timestamp created_at = 6;
 }

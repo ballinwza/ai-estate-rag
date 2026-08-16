@@ -10,6 +10,11 @@ class PineconeRepository:
     def __init__(self, pc_index: Index | GrpcIndex) -> None:
         self.index = pc_index
 
+    async def upsert_vectors_with_namespace(
+        self, records: list[Any], namespace: str
+    ) -> None:
+        self.index.upsert(vectors=records, namespace=namespace)
+
     async def upsert_vectors(
         self,
         document_id: str,
