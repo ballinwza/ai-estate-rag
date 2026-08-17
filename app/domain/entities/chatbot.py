@@ -1,14 +1,14 @@
 from pydantic import BaseModel
 
 
-class CreateMultiTenantChatbotDTO(BaseModel):
+class CreateMultiTenantChatbot(BaseModel):
     user_id: str
     name: str
     description: str
     system_prompt: str
 
 
-class UpdateMultiTenantChatbotDTO(BaseModel):
+class UpdateMultiTenantChatbot(BaseModel):
     chatbot_id: str
     user_id: str
     name: str | None = None
@@ -16,17 +16,17 @@ class UpdateMultiTenantChatbotDTO(BaseModel):
     system_prompt: str | None = None
 
 
-class GetMultiTenantChatbotDTO(BaseModel):
+class GetMultiTenantChatbot(BaseModel):
     chatbot_id: str
     user_id: str
 
 
-class ListMultiTenantChatbotsDTO(BaseModel):
+class ListMultiTenantChatbots(BaseModel):
     user_id: str
     limit: int = 100
     offset: int = 0
 
 
-class DeleteMultiTenantChatbotDTO(BaseModel):
+class DeleteMultiTenantChatbot(BaseModel):
     chatbot_id: str
     user_id: str

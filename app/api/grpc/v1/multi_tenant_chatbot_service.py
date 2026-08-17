@@ -2,16 +2,16 @@ import grpc
 import grpc.aio
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from app.api.dto.multi_tenant_dto import (
-    CreateMultiTenantChatbotDTO,
-    DeleteMultiTenantChatbotDTO,
-    GetMultiTenantChatbotDTO,
-    ListMultiTenantChatbotsDTO,
-    UpdateMultiTenantChatbotDTO,
-)
 from app.api.grpc.v1 import multi_tenant_chatbot_pb2, multi_tenant_chatbot_pb2_grpc
+from app.domain.entities.chatbot import (
+    CreateMultiTenantChatbot,
+    DeleteMultiTenantChatbot,
+    GetMultiTenantChatbot,
+    ListMultiTenantChatbots,
+    UpdateMultiTenantChatbot,
+)
 from app.domain.entities.multi_tenant_doc import ChatbotBlueprint
-from app.usecases.multi_tenant.chatbot import (
+from app.usecases.multi_tenant.chatbot_usecase import (
     CreateMultiTenantChatbotUseCase,
     DeleteMultiTenantChatbotUseCase,
     GetMultiTenantChatbotUseCase,
@@ -79,7 +79,7 @@ class ChatbotGrpcService(multi_tenant_chatbot_pb2_grpc.ChatbotServiceServicer):
     ) -> multi_tenant_chatbot_pb2.CreateMultiTenantChatbotResponse:
         """RPC สำหรับสร้าง Chatbot Blueprint"""
         try:
-            dto = CreateMultiTenantChatbotDTO(
+            dto = CreateMultiTenantChatbot(
                 user_id=request.user_id,
                 name=request.name,
                 description=request.description,
@@ -101,9 +101,7 @@ class ChatbotGrpcService(multi_tenant_chatbot_pb2_grpc.ChatbotServiceServicer):
     ) -> multi_tenant_chatbot_pb2.GetMultiTenantChatbotResponse:
         """RPC สำหรับดึงข้อมูล Chatbot Blueprint ตาม ID"""
         try:
-            dto = GetMultiTenantChatbotDTO(
-                chatbot_id=request.id, user_id=request.user_id
-            )
+            dto = GetMultiTenantChatbot(chatbot_id=request.id, user_id=request.user_id)
             chatbot = await self.get_use_case.execute(dto)
             if chatbot == None:
                 await context.abort(grpc.StatusCode.NOT_FOUND, "Not found Chatbot")
@@ -126,7 +124,7 @@ class ChatbotGrpcService(multi_tenant_chatbot_pb2_grpc.ChatbotServiceServicer):
             limit = request.page_size if request.page_size > 0 else 10
             offset = max(request.page_token, 0)
 
-            dto = ListMultiTenantChatbotsDTO(
+            dto = ListMultiTenantChatbots(
                 user_id=request.user_id,
                 limit=limit,
                 offset=offset,
@@ -175,7 +173,7 @@ class ChatbotGrpcService(multi_tenant_chatbot_pb2_grpc.ChatbotServiceServicer):
                 if request.system_prompt:
                     update_fields["system_prompt"] = request.system_prompt
 
-            dto = UpdateMultiTenantChatbotDTO(
+            dto = UpdateMultiTenantChatbot(
                 chatbot_id=request.id, user_id=request.user_id, **update_fields
             )
 
@@ -197,7 +195,7 @@ class ChatbotGrpcService(multi_tenant_chatbot_pb2_grpc.ChatbotServiceServicer):
     ) -> multi_tenant_chatbot_pb2.DeleteMultiTenantChatbotResponse:
         """RPC สำหรับลบ Chatbot Blueprint"""
         try:
-            dto = DeleteMultiTenantChatbotDTO(
+            dto = DeleteMultiTenantChatbot(
                 chatbot_id=request.id, user_id=request.user_id
             )
             success = await self.delete_use_case.execute(dto)

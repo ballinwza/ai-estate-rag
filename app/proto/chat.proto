@@ -7,7 +7,6 @@ import "google/protobuf/timestamp.proto";
 service ChatGRPC {
   rpc Query (ChatRequest) returns (ChatResponse) {}
   rpc UploadPdf (stream UploadPdfRequest) returns (UploadPdfResponse);
-  rpc UploadFileStramMultiTenant (stream UploadFileStreamRequest) returns (UploadFileStreamResponse);
 }
 
 // Query
@@ -38,32 +37,3 @@ message UploadPdfResponse {
   string message = 3;
 }
 
-// UploadFileStramMultiTenant
-enum FileStatus {
-  PENDING = 0;
-  COMPLETED = 1;
-  FAILED = 2; 
-}
-
-message FileMetadata {
-  string user_id = 1;
-  string chatbot_id = 2;
-  string filename = 3;
-  string file_type = 4; 
-}
-
-message UploadFileStreamRequest {
-  oneof payload {
-    FileMetadata metadata = 1; 
-    bytes chunk_data = 2;     
-  }
-}
-
-message UploadFileStreamResponse {
-  string file_id = 1;
-  FileStatus status = 2;
-  int32 total_chunks = 3;
-  int64 total_bytes = 4;
-  string message = 5;
-  google.protobuf.Timestamp created_at = 6;
-}

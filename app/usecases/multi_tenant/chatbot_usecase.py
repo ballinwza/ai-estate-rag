@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
-from app.api.dto.multi_tenant_dto import (
-    CreateMultiTenantChatbotDTO,
-    DeleteMultiTenantChatbotDTO,
-    GetMultiTenantChatbotDTO,
-    ListMultiTenantChatbotsDTO,
-    UpdateMultiTenantChatbotDTO,
+from app.domain.entities.chatbot import (
+    CreateMultiTenantChatbot,
+    DeleteMultiTenantChatbot,
+    GetMultiTenantChatbot,
+    ListMultiTenantChatbots,
+    UpdateMultiTenantChatbot,
 )
 from app.domain.entities.multi_tenant_doc import ChatbotBlueprint
 from app.domain.repositories.multi_tenant.multi_tenant_repository import (
@@ -19,7 +19,7 @@ class CreateMultiTenantChatbotUseCase:
     def __init__(self, chatbot_repo: MultiTenantChatbotRepository):
         self.chatbot_repo = chatbot_repo
 
-    async def execute(self, dto: CreateMultiTenantChatbotDTO) -> ChatbotBlueprint:
+    async def execute(self, dto: CreateMultiTenantChatbot) -> ChatbotBlueprint:
         chatbot = ChatbotBlueprint(
             user_id=dto.user_id,
             name=dto.name,
@@ -35,7 +35,7 @@ class GetMultiTenantChatbotUseCase:
     def __init__(self, chatbot_repo: MultiTenantChatbotRepository):
         self.chatbot_repo = chatbot_repo
 
-    async def execute(self, dto: GetMultiTenantChatbotDTO) -> ChatbotBlueprint | None:
+    async def execute(self, dto: GetMultiTenantChatbot) -> ChatbotBlueprint | None:
         chatbot = await self.chatbot_repo.get_by_id(
             chatbot_id=dto.chatbot_id, user_id=dto.user_id
         )
@@ -52,7 +52,7 @@ class ListUserMultiTenantChatbotsUseCase:
     def __init__(self, chatbot_repo: MultiTenantChatbotRepository):
         self.chatbot_repo = chatbot_repo
 
-    async def execute(self, dto: ListMultiTenantChatbotsDTO) -> list[ChatbotBlueprint]:
+    async def execute(self, dto: ListMultiTenantChatbots) -> list[ChatbotBlueprint]:
         return await self.chatbot_repo.list_by_user_id(
             user_id=dto.user_id, limit=dto.limit, offset=dto.offset
         )
@@ -64,7 +64,7 @@ class UpdateMultiTenantChatbotUseCase:
     def __init__(self, chatbot_repo: MultiTenantChatbotRepository):
         self.chatbot_repo = chatbot_repo
 
-    async def execute(self, dto: UpdateMultiTenantChatbotDTO) -> ChatbotBlueprint:
+    async def execute(self, dto: UpdateMultiTenantChatbot) -> ChatbotBlueprint:
         # เตรียมข้อมูลเฉพาะ Field ที่มีการส่งมาแก้ไข
         update_data = {}
         if dto.name is not None:
@@ -98,7 +98,7 @@ class DeleteMultiTenantChatbotUseCase:
     def __init__(self, chatbot_repo: MultiTenantChatbotRepository):
         self.chatbot_repo = chatbot_repo
 
-    async def execute(self, dto: DeleteMultiTenantChatbotDTO) -> bool:
+    async def execute(self, dto: DeleteMultiTenantChatbot) -> bool:
         deleted = await self.chatbot_repo.delete(
             chatbot_id=dto.chatbot_id, user_id=dto.user_id
         )

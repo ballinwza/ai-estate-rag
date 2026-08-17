@@ -4,8 +4,15 @@ from typing import TypedDict
 import grpc
 import grpc.aio
 
-from app.api.grpc.v1 import chat_pb2_grpc, multi_tenant_chatbot_pb2_grpc
+from app.api.di.chatbot_di import build_chatbot_usecases
+from app.api.di.knowledge_file_di import build_knowledge_file_usecase
+from app.api.grpc.v1 import (
+    chat_pb2_grpc,
+    knowledge_file_pb2_grpc,
+    multi_tenant_chatbot_pb2_grpc,
+)
 from app.api.grpc.v1.chat_servicer import ChatServicer
+from app.api.grpc.v1.knowledge_file_servicer import KnowledgeFileGrpcServicer
 from app.api.grpc.v1.multi_tenant_chatbot_service import ChatbotGrpcService
 from app.api.v1.deps import (
     get_chunker_service,
@@ -17,21 +24,10 @@ from app.core.pinecone import get_pinecone_index
 from app.infrastructure.persistence.mongodb.document_repository import (
     MongoDocumentRepository,
 )
-from app.infrastructure.persistence.mongodb.multi_tenant_repository import (
-    MongoMultiTenantChatbotRepository,
-)
 from app.infrastructure.persistence.vector_store.pinecone_repository import (
     PineconeRepository,
 )
 from app.usecases.generate_answer import GenerateAnswerUseCase
-from app.usecases.multi_tenant.chatbot import (
-    CreateMultiTenantChatbotUseCase,
-    DeleteMultiTenantChatbotUseCase,
-    GetMultiTenantChatbotUseCase,
-    ListUserMultiTenantChatbotsUseCase,
-    UpdateMultiTenantChatbotUseCase,
-)
-from app.usecases.multi_tenant.create_knowledge_doc import CreateKnowledgeDocUseCase
 from app.usecases.upload_chunk_file import UploadChunkFileUseCase
 
 logger = logging.getLogger("uvicorn")
@@ -44,7 +40,6 @@ logger = logging.getLogger("uvicorn")
 class GenerateAnswerDict(TypedDict):
     generateAnswerUsecase: GenerateAnswerUseCase
     uploadChunkFileUsecase: UploadChunkFileUseCase
-    createKnowledgeDocUseCase: CreateKnowledgeDocUseCase
 
 
 def build_generate_answer_usecase() -> GenerateAnswerDict:
@@ -72,39 +67,6 @@ def build_generate_answer_usecase() -> GenerateAnswerDict:
             embedder_service=embedder_service,
             chunker_service=chunker_service,
         ),
-        "createKnowledgeDocUseCase": CreateKnowledgeDocUseCase(
-            mongo_repo=mongo_repo,
-            pinecone_repo=pinecone_repo,
-            parser_service=parser_service,
-            embedder_service=embedder_service,
-            chunker_service=chunker_service,
-        ),
-    }
-
-
-# Type Dict เพิ่มเติมสำหรับ Chatbot Blueprint Use Cases
-class ChatbotUseCaseDict(TypedDict):
-    create_use_case: CreateMultiTenantChatbotUseCase
-    get_use_case: GetMultiTenantChatbotUseCase
-    list_use_case: ListUserMultiTenantChatbotsUseCase
-    update_use_case: UpdateMultiTenantChatbotUseCase
-    delete_use_case: DeleteMultiTenantChatbotUseCase
-
-
-def build_chatbot_usecases() -> ChatbotUseCaseDict:
-    """
-    Factory Function สำหรับดึง Mongo Connection และ Inject เข้า
-    MongoMultiTenantChatbotRepository ร่วมกับ Chatbot Blueprint Use Cases
-    """
-    mongo_db = get_mongodb_database()
-    chatbot_repo = MongoMultiTenantChatbotRepository(db=mongo_db)
-
-    return {
-        "create_use_case": CreateMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
-        "get_use_case": GetMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
-        "list_use_case": ListUserMultiTenantChatbotsUseCase(chatbot_repo=chatbot_repo),
-        "update_use_case": UpdateMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
-        "delete_use_case": DeleteMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
     }
 
 
@@ -125,12 +87,10 @@ async def start_grpc_server(
     di = build_generate_answer_usecase()
     chat_usecase = di["generateAnswerUsecase"]
     upload_chunk_file = di["uploadChunkFileUsecase"]
-    createKnowledgeDocUseCase = di["createKnowledgeDocUseCase"]
 
     chat_servicer = ChatServicer(
         chat_usecase=chat_usecase,
         upload_file_usecase=upload_chunk_file,
-        create_knowledge_usecase=createKnowledgeDocUseCase,
     )
     chat_pb2_grpc.add_ChatGRPCServicer_to_server(chat_servicer, server)
 
@@ -147,6 +107,16 @@ async def start_grpc_server(
         chatbot_servicer, server
     )
 
+    knowledge_file_usecase = build_knowledge_file_usecase()
+    knowledge_file_servicer = KnowledgeFileGrpcServicer(
+        process_ingest_use_case=knowledge_file_usecase["createKnowledgeDocUseCase"],
+        get_file_use_case=knowledge_file_usecase["getKnowledgeDocUseCase"],
+        list_files_use_case=knowledge_file_usecase["listKnowledgeDocsUseCase"],
+        delete_file_use_case=knowledge_file_usecase["deleteKnowledgeDocUseCase"],
+    )
+    knowledge_file_pb2_grpc.add_KnowledgeFileServiceServicer_to_server(
+        knowledge_file_servicer, server
+    )
     # 4. โหลด Credentials สำหรับ mTLS
     # root_ca = load_file(ca_cert_path)
     # server_key = load_file(server_key_path)
