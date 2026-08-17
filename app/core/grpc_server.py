@@ -4,8 +4,9 @@ from typing import TypedDict
 import grpc
 import grpc.aio
 
-from app.api.grpc.v1 import chat_pb2_grpc
+from app.api.grpc.v1 import chat_pb2_grpc, multi_tenant_chatbot_pb2_grpc
 from app.api.grpc.v1.chat_servicer import ChatServicer
+from app.api.grpc.v1.multi_tenant_chatbot_service import ChatbotGrpcService
 from app.api.v1.deps import (
     get_chunker_service,
     get_embedder_service,
@@ -16,10 +17,20 @@ from app.core.pinecone import get_pinecone_index
 from app.infrastructure.persistence.mongodb.document_repository import (
     MongoDocumentRepository,
 )
+from app.infrastructure.persistence.mongodb.multi_tenant_repository import (
+    MongoMultiTenantChatbotRepository,
+)
 from app.infrastructure.persistence.vector_store.pinecone_repository import (
     PineconeRepository,
 )
 from app.usecases.generate_answer import GenerateAnswerUseCase
+from app.usecases.multi_tenant.chatbot import (
+    CreateMultiTenantChatbotUseCase,
+    DeleteMultiTenantChatbotUseCase,
+    GetMultiTenantChatbotUseCase,
+    ListUserMultiTenantChatbotsUseCase,
+    UpdateMultiTenantChatbotUseCase,
+)
 from app.usecases.multi_tenant.create_knowledge_doc import CreateKnowledgeDocUseCase
 from app.usecases.upload_chunk_file import UploadChunkFileUseCase
 
@@ -71,6 +82,32 @@ def build_generate_answer_usecase() -> GenerateAnswerDict:
     }
 
 
+# Type Dict เพิ่มเติมสำหรับ Chatbot Blueprint Use Cases
+class ChatbotUseCaseDict(TypedDict):
+    create_use_case: CreateMultiTenantChatbotUseCase
+    get_use_case: GetMultiTenantChatbotUseCase
+    list_use_case: ListUserMultiTenantChatbotsUseCase
+    update_use_case: UpdateMultiTenantChatbotUseCase
+    delete_use_case: DeleteMultiTenantChatbotUseCase
+
+
+def build_chatbot_usecases() -> ChatbotUseCaseDict:
+    """
+    Factory Function สำหรับดึง Mongo Connection และ Inject เข้า
+    MongoMultiTenantChatbotRepository ร่วมกับ Chatbot Blueprint Use Cases
+    """
+    mongo_db = get_mongodb_database()
+    chatbot_repo = MongoMultiTenantChatbotRepository(db=mongo_db)
+
+    return {
+        "create_use_case": CreateMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
+        "get_use_case": GetMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
+        "list_use_case": ListUserMultiTenantChatbotsUseCase(chatbot_repo=chatbot_repo),
+        "update_use_case": UpdateMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
+        "delete_use_case": DeleteMultiTenantChatbotUseCase(chatbot_repo=chatbot_repo),
+    }
+
+
 async def start_grpc_server(
     host: str = "[::]",
     port: int = 8000,
@@ -85,21 +122,30 @@ async def start_grpc_server(
     """
     server = grpc.aio.server()
 
-    # 1. Instantiates Dependencies/UseCase
     di = build_generate_answer_usecase()
     chat_usecase = di["generateAnswerUsecase"]
     upload_chunk_file = di["uploadChunkFileUsecase"]
     createKnowledgeDocUseCase = di["createKnowledgeDocUseCase"]
 
-    # 2. ส่ง UseCase เข้า Servicer
     chat_servicer = ChatServicer(
         chat_usecase=chat_usecase,
         upload_file_usecase=upload_chunk_file,
         create_knowledge_usecase=createKnowledgeDocUseCase,
     )
-
-    # 3. ลงทะเบียน Servicer เข้า Server
     chat_pb2_grpc.add_ChatGRPCServicer_to_server(chat_servicer, server)
+
+    # Multi Tenant Chatbot blueprint
+    chatbot_usecases = build_chatbot_usecases()
+    chatbot_servicer = ChatbotGrpcService(
+        create_use_case=chatbot_usecases["create_use_case"],
+        get_use_case=chatbot_usecases["get_use_case"],
+        list_use_case=chatbot_usecases["list_use_case"],
+        update_use_case=chatbot_usecases["update_use_case"],
+        delete_use_case=chatbot_usecases["delete_use_case"],
+    )
+    multi_tenant_chatbot_pb2_grpc.add_ChatbotServiceServicer_to_server(
+        chatbot_servicer, server
+    )
 
     # 4. โหลด Credentials สำหรับ mTLS
     # root_ca = load_file(ca_cert_path)

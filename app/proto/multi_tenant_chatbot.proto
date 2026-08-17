@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package chatbot.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
+
+// Service สำหรับจัดการ Chatbot Blueprint / Profile Operations
+service ChatbotService {
+  // สร้าง Chatbot Blueprint ใหม่
+  rpc CreateMultiTenantChatbot(CreateMultiTenantChatbotRequest) returns (CreateMultiTenantChatbotResponse);
+
+  // ดึงข้อมูล Chatbot Blueprint ตาม ID
+  rpc GetMultiTenantChatbot(GetMultiTenantChatbotRequest) returns (GetMultiTenantChatbotResponse);
+
+  // ดึงรายการ Chatbot Blueprint ทั้งหมดของผู้ใช้ (รองรับ Pagination)
+  rpc ListMultiTenantChatbots(ListMultiTenantChatbotsRequest) returns (ListMultiTenantChatbotsResponse);
+
+  // แก้ไขข้อมูล Chatbot Blueprint (ใช้ FieldMask สำหรับ Partial Update)
+  rpc UpdateMultiTenantChatbot(UpdateMultiTenantChatbotRequest) returns (UpdateMultiTenantChatbotResponse);
+
+  // ลบ Chatbot Blueprint
+  rpc DeleteMultiTenantChatbot(DeleteMultiTenantChatbotRequest) returns (DeleteMultiTenantChatbotResponse);
+}
+
+// ==============================================================================
+// ENTITIES / MESSAGES
+// ==============================================================================
+
+// Message แสดงข้อมูลพิมพ์เขียวของ Chatbot Blueprint
+message ChatbotBlueprint {
+  string id = 1;               // Unique Identifier (MongoDB _id)
+  string user_id = 2;          // ID ของผู้ใช้งาน/เจ้าของ (Multi-tenant ID)
+  string name = 3;             // ชื่อของ Chatbot
+  string description = 4;      // รายละเอียด/บทบาทของ Chatbot
+  string system_prompt = 5;     // คำสั่งหลักควบคุมนิสัยและกฎเกณฑ์ของ LLM
+  google.protobuf.Timestamp created_at = 6; // เวลาสร้าง
+  google.protobuf.Timestamp updated_at = 7; // เวลาอัปเดตล่าสุด
+}
+
+// ==============================================================================
+// REQUEST & RESPONSE MESSAGES
+// ==============================================================================
+
+// 1. Create Chatbot
+message CreateMultiTenantChatbotRequest {
+  string user_id = 1;          // Required: เจ้าของบอท
+  string name = 2;             // Required: ชื่อบอท
+  string description = 3;      // Optional: คำอธิบาย
+  string system_prompt = 4;     // Required: System Instruction สำหรับ LLM
+}
+
+message CreateMultiTenantChatbotResponse {
+  ChatbotBlueprint chatbot = 1;
+}
+
+// 2. Get Chatbot
+message GetMultiTenantChatbotRequest {
+  string id = 1;               // Required: Chatbot ID
+  string user_id = 2;          // Required: User ID สำหรับตรวจสิทธิ์ (Multi-tenant Security)
+}
+
+message GetMultiTenantChatbotResponse {
+  ChatbotBlueprint chatbot = 1;
+}
+
+// 3. List Chatbots
+message ListMultiTenantChatbotsRequest {
+  string user_id = 1;          // Required: User ID ที่ต้องการดึงรายการบอท
+  int32 page_size = 2;         // จำนวนรายการต่อหน้า (Default เช่น 10 หรือ 20)
+  int32 page_token = 3;        // Page token / Offset สำหรับ Pagination
+}
+
+message ListMultiTenantChatbotsResponse {
+  repeated ChatbotBlueprint chatbots = 1;
+  int32 next_page_token = 2;   // Offset ของหน้าถัดไป (ถ้าเป็น 0 แปลว่าหมดแล้ว)
+  int32 total_count = 3;       // จำนวนรายการทั้งหมดของผู้ใช้งานนี้
+}
+
+// 4. Update Chatbot
+message UpdateMultiTenantChatbotRequest {
+  string id = 1;               // Required: Chatbot ID ที่ต้องการแก้
+  string user_id = 2;          // Required: User ID สำหรับตรวจสิทธิ์
+  string name = 3;             // Optional: ชื่อใหม่
+  string description = 4;      // Optional: รายละเอียดใหม่
+  string system_prompt = 5;     // Optional: System Prompt ใหม่
+  
+  // FieldMask ระบุ field ที่ต้องการอัปเดต (เช่น "name,system_prompt")
+  google.protobuf.FieldMask update_mask = 6; 
+}
+
+message UpdateMultiTenantChatbotResponse {
+  ChatbotBlueprint chatbot = 1;
+}
+
+// 5. Delete Chatbot
+message DeleteMultiTenantChatbotRequest {
+  string id = 1;               // Required: Chatbot ID ที่ต้องการลบ
+  string user_id = 2;          // Required: User ID สำหรับตรวจสิทธิ์
+}
+
+message DeleteMultiTenantChatbotResponse {
+  bool success = 1;            // ผลลัพธ์การลบ (true/false)
+  string message = 2;          // ข้อความแจ้งสถานะ
+}
