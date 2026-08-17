@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package knowledge_file.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// --- gRPC Service Definition ---
+
+service KnowledgeFileService {
+  // ประมวลผลและสร้าง Ingestion เอกสารเข้า Vector DB
+  rpc CreateKnowledgeFile (stream UploadFileStreamRequest) returns (UploadFileStreamResponse);
+
+  // ดึงข้อมูลเอกสารตาม file_id
+  rpc GetKnowledgeFile (GetKnowledgeFileRequest) returns (GetKnowledgeFileResponse);
+
+  // ดึงรายการเอกสารทั้งหมดของ Chatbot
+  rpc ListKnowledgeFiles (ListKnowledgeFilesRequest) returns (ListKnowledgeFilesResponse);
+
+  // ลบเอกสารออกจาก MongoDB และ Vector DB
+  rpc DeleteKnowledgeFile (DeleteKnowledgeFileRequest) returns (DeleteKnowledgeFileResponse);
+
+}
+
+// Enum แสดงสถานะการประมวลผลของไฟล์
+enum FileStatus {
+  PENDING = 0;
+  COMPLETED = 1;
+  FAILED = 2; 
+}
+
+// Struct แสดงข้อมูล Chunk ของเอกสาร
+message Chunk {
+  string vector_id = 1;
+  int32 chunk_index = 2;
+  string text_content = 3;
+  int32 page_number = 4;
+  int32 token_count = 5;
+}
+
+// Message แสดงข้อมูล KnowledgeFile Entity
+message KnowledgeFile {
+  string id = 1;
+  string user_id = 2;
+  string chatbot_id = 3;
+  string filename = 4;
+  string file_type = 5;
+  int64 file_size_bytes = 6;
+  FileStatus status = 7;
+  int32 total_chunks = 8;
+  repeated Chunk chunks = 9;
+  int32 total_page = 10;
+  optional string text_content = 11;
+  optional string error_message = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// --- Request / Response Messages ---
+
+
+message FileMetadata {
+  string user_id = 1;
+  string chatbot_id = 2;
+  string filename = 3;
+  string file_type = 4; 
+}
+
+message UploadFileStreamRequest {
+  oneof payload {
+    FileMetadata metadata = 1; 
+    bytes chunk_data = 2;     
+  }
+}
+
+message UploadFileStreamResponse {
+  string file_id = 1;
+  FileStatus status = 2;
+  int32 total_chunks = 3;
+  int64 total_bytes = 4;
+  string message = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message GetKnowledgeFileRequest {
+  string id = 1;
+  string user_id = 2;
+}
+
+message GetKnowledgeFileResponse {
+  KnowledgeFile file = 1;
+}
+
+message ListKnowledgeFilesRequest {
+  string user_id = 1;
+  string chatbot_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListKnowledgeFilesResponse {
+  repeated KnowledgeFile files = 1;
+  int32 total_count = 2;
+}
+
+message DeleteKnowledgeFileRequest {
+  string chatbot_id = 1;
+  string user_id = 2;
+}
+
+message DeleteKnowledgeFileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+

@@ -1,22 +1,31 @@
+from datetime import datetime, timezone
 from typing import Any
 
+from app.domain.entities.knowledge_file import (
+    CreateKnowledgeFile,
+    DeleteKnowledgeFile,
+    GetKnowledgeFile,
+    ListKnowledgeFiles,
+)
 from app.domain.entities.multi_tenant_doc import (
     Chunk,
     FileStatus,
     KnowledgeFiles,
     MetadataVectorRecord,
-    VectorRecord,
+)
+from app.domain.repositories.multi_tenant.knowledge_file_repository import (
+    KnowledgeFileRepository,
 )
 from app.infrastructure.llm.chunker import ChunkerService
 from app.infrastructure.llm.embedder import EmbedderService
 from app.infrastructure.llm.llm import LlmService
-from app.infrastructure.persistence.mongodb.document_repository import (
-    MongoDocumentRepository,
+from app.infrastructure.persistence.mongodb.knowledge_file_repository import (
+    MongoKnowledgeFileRepository,
 )
 from app.infrastructure.persistence.vector_store.pinecone_repository import (
     PineconeRepository,
 )
-from app.schemas.multi_tenant import IngestDocumentDTO
+from app.schemas.multi_tenant import VectorRecordSchema
 
 
 class CreateKnowledgeDocUseCase:
@@ -32,7 +41,7 @@ class CreateKnowledgeDocUseCase:
     def __init__(
         self,
         parser_service: LlmService,
-        mongo_repo: MongoDocumentRepository,
+        mongo_repo: MongoKnowledgeFileRepository,
         pinecone_repo: PineconeRepository,
         embedder_service: EmbedderService,
         chunker_service: ChunkerService,
@@ -44,9 +53,8 @@ class CreateKnowledgeDocUseCase:
         self.mongo_repo = mongo_repo
         self.pinecone_repo = pinecone_repo
 
-    async def execute(self, dto: IngestDocumentDTO) -> KnowledgeFiles:
+    async def execute(self, dto: CreateKnowledgeFile) -> KnowledgeFiles:
         # 1. สร้าง Record เริ่มต้นใน MongoDB
-
         initial_knowledge_file = KnowledgeFiles(
             user_id=dto.user_id,
             chatbot_id=dto.chatbot_id,
@@ -56,12 +64,8 @@ class CreateKnowledgeDocUseCase:
             status=FileStatus.PENDING,
         )
 
-        knowledge_file_model = initial_knowledge_file.model_dump(
-            by_alias=True, exclude_none=True
-        )
-
-        saved_file = await self.mongo_repo.insert_document(knowledge_file_model)
-        file_id = str(saved_file.inserted_id)
+        saved_file = await self.mongo_repo.create(initial_knowledge_file)
+        file_id = str(saved_file.id)
 
         # 1. สกัดข้อความจากเอกสาร PDF หรือ รูปภาพ
         extracted_doc = await self.parser_service.parse_chunk_file(
@@ -111,42 +115,107 @@ class CreateKnowledgeDocUseCase:
                     chunk_for_doc.model_dump(by_alias=True, exclude_none=True)
                 )
 
-                test = VectorRecord(
+                vectorRecord = VectorRecordSchema(
                     id=vector_id,
                     values=vector_values.values,
                     metadata=metadata.model_dump(by_alias=True, exclude_none=True),
                 )
 
-                vector_records.append(test.model_dump(by_alias=True, exclude_none=True))
-
-            # แยก Namespace ตาม tenant (เช่น chatbot_id หรือ user_id)
-            namespace = f"tenant_{dto.user_id}_{dto.chatbot_id}"
+                vector_records.append(
+                    vectorRecord.model_dump(by_alias=True, exclude_none=True)
+                )
 
             await self.pinecone_repo.upsert_vectors_with_namespace(
-                vector_records, namespace=namespace
+                vector_records, user_id=dto.user_id, chatbot_id=dto.chatbot_id
             )
 
+            total_pages = max([c.page_number for c in chunks], default=1)
             updated_data = {
                 "chunks": dump_chunks,
                 "total_chunks": len(chunks),
+                "total_page": total_pages,
                 "status": FileStatus.COMPLETED,
                 "text_content": extracted_doc.get("full_text", "Nothing"),
             }
 
-            saved_sucessed = await self.mongo_repo.update_by_id_response(
-                file_id, updated_data
+            saved_sucessed = await self.mongo_repo.update(
+                file_id=file_id, user_id=dto.user_id, update_data=updated_data
             )
             if not saved_sucessed:
                 raise Exception(f"File with id {file_id} not found")
 
-            # TODO: แปลง id กลับมาเป็น str ก่อน
-
-            result = KnowledgeFiles(**saved_sucessed)
-            return result
+            return saved_sucessed
 
         except Exception as e:
-            # เก็บ Error และเปลี่ยนสถานะเป็น FAILED
-            await self.mongo_repo.update_by_id(
-                file_id, {"status": FileStatus.FAILED, "error_message": str(e)}
+            fail_data = {
+                "status": FileStatus.FAILED,  # [cite: 2]
+                "error_message": str(e),  # [cite: 2]
+                "updated_at": datetime.now(timezone.utc),
+            }
+            await self.mongo_repo.update(
+                file_id=file_id, user_id=dto.user_id, update_data=fail_data
             )
             raise e
+
+
+class GetKnowledgeDocUseCase:
+    """Use Case สำหรับดึงข้อมูลเอกสารรายไฟล์ พร้อมตรวจสอบ Owner (Multi-tenant)"""
+
+    def __init__(self, file_repo: KnowledgeFileRepository):
+        self.file_repo = file_repo
+
+    async def execute(self, dto: GetKnowledgeFile) -> KnowledgeFiles:
+        file_doc = await self.file_repo.get_by_id(file_id=dto.id, user_id=dto.user_id)
+        if not file_doc:
+            raise ValueError(
+                f"Knowledge file with ID '{dto.id}' not found for this user."
+            )
+        return file_doc
+
+
+class ListKnowledgeDocsUseCase:
+    """Use Case สำหรับดึงรายการเอกสารทั้งหมดภายใต้ Chatbot นั้นๆ"""
+
+    def __init__(self, file_repo: KnowledgeFileRepository):
+        self.file_repo = file_repo
+
+    async def execute(self, dto: ListKnowledgeFiles) -> list[KnowledgeFiles]:
+        return await self.file_repo.list_by_chatbot_id(
+            user_id=dto.user_id,
+            chatbot_id=dto.chatbot_id,
+            limit=dto.limit,
+            offset=dto.offset,
+        )
+
+
+class DeleteKnowledgeDocUseCase:
+    """Use Case สำหรับลบเอกสารทั้งใน MongoDB และ Vector DB (Pinecone)"""
+
+    def __init__(
+        self,
+        file_repo: KnowledgeFileRepository,
+        vector_repo: PineconeRepository,
+    ):
+        self.file_repo = file_repo
+        self.vector_repo = vector_repo
+
+    async def execute(self, dto: DeleteKnowledgeFile) -> bool:
+        # 1. ตรวจสอบว่าไฟล์มีอยู่จริงหรือไม่
+        file_doc = await self.file_repo.get_by_filter(
+            {
+                "chatbot_id": dto.chatbot_id,
+                "user_id": dto.user_id,
+            }
+        )
+        if not file_doc:
+            raise ValueError(
+                f"Knowledge file with ID '{dto.chatbot_id}' not found for this user."
+            )
+
+        # 2. ลบ Vectors ใน Vector DB ลบตาม file_id
+        await self.vector_repo.delete_by_file_id(
+            file_id=str(file_doc.id), user_id=dto.user_id, chatbot_id=dto.chatbot_id
+        )
+
+        # 3. ลบ Document Metadata ใน MongoDB
+        return await self.file_repo.delete(file_id=dto.chatbot_id, user_id=dto.user_id)

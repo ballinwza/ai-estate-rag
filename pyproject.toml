@@ -2,4 +2,4 @@
 known-first-party = ["app"]
 
 [tool.ruff.lint]
-ignore = ["BLE001"]
+ignore = ["BLE001", "TRY002", "TRY201"]
