@@ -1,5 +1,3 @@
-import ast
-
 from app.infrastructure.llm.embedder import EmbedderService
 from app.infrastructure.llm.llm import LlmService
 from app.infrastructure.persistence.mongodb.document_repository import (
@@ -66,16 +64,4 @@ class GenerateAnswerUseCase:
 """
         response = await self.llm.get_llm_answer(prompt)
 
-        # 1. จัดการแปลง response.content ให้มั่นใจว่าเป็น str แน่นอน
-        if isinstance(response.content, str):
-            content_str = response.content
-        elif isinstance(response.content, list):
-            # ถ้าเป็น list (เช่น [TextContentBlock(...)]) ให้เอา text จาก element แรก หรือ join ออกมา
-            content_str = str(response.content[0])
-        else:
-            content_str = str(response.content)
-
-        # 2. แปลง str เป็น JSON
-        parsed_json = ast.literal_eval(content_str)
-
-        return ChatResponse(message=parsed_json["text"])
+        return ChatResponse(message=response)

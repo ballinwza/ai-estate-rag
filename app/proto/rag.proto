@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Service สำหรับจัดการคำถาม-ตอบผ่าน RAG และ Vector Search
+service RagService {
+  // RPC Method สำหรับค้นหาบริบทและสร้าง Message คำตอบจาก AI
+  rpc SearchSimilar (RagSearchSimilarRequestDTO) returns (RagResponseDTO);
+}
+
+// ------------------------------------------------------------------
+// Request & Response Messages
+// ------------------------------------------------------------------
+
+message RagSearchSimilarRequestDTO {
+  string user_id = 1;
+  string chatbot_id = 2;
+  string query_text = 3;
+  optional int32 top_k = 4;
+  optional string knowledge_file_id = 5; // รองรับ `str | None` ด้วย optional
+}
+
+message RagResponseDTO {
+  string answer_message = 1;
+  repeated SearchVectorRecordItemDTO sources = 2; // repeated = list
+}
+
+message SearchVectorRecordItemDTO {
+  float score = 1;
+  VectorRecordDTO record = 2;
+}
+
+message VectorRecordDTO {
+  string id = 1;
+  repeated float values = 2;
+  
+  MetadataVectorRecordDTO metadata = 3; 
+}
+
+message MetadataVectorRecordDTO {
+  string user_id = 1;
+  string chatbot_id = 2;
+  string file_id = 3;
+  int32 chunk_index = 4;
+  string text_content = 5;
+  int32 page_number = 6;
+  string filename = 7;
+}

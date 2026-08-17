@@ -1,3 +1,4 @@
+import ast
 import base64
 import io
 import json
@@ -15,9 +16,21 @@ class LlmService:
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
 
-    async def get_llm_answer(self, prompt: str):
+    async def get_llm_answer(self, prompt: str) -> str:
         response = await self.llm.ainvoke(prompt)
-        return response
+
+        # 1. จัดการแปลง response.content ให้มั่นใจว่าเป็น str แน่นอน
+        if isinstance(response.content, str):
+            content_str = response.content
+        elif isinstance(response.content, list):
+            # ถ้าเป็น list (เช่น [TextContentBlock(...)]) ให้เอา text จาก element แรก หรือ join ออกมา
+            content_str = str(response.content[0])
+        else:
+            content_str = str(response.content)
+
+        # 2. แปลง str เป็น JSON
+        parsed_json = ast.literal_eval(content_str)
+        return parsed_json["text"]
 
     async def parse_file(self, file: UploadFile) -> dict[str, Any]:
         content = await file.read()

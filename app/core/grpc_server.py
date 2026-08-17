@@ -1,73 +1,28 @@
 import logging
-from typing import TypedDict
 
 import grpc
 import grpc.aio
 
 from app.api.di.chatbot_di import build_chatbot_usecases
+from app.api.di.generate_answer_di import build_generate_answer_usecase
 from app.api.di.knowledge_file_di import build_knowledge_file_usecase
+from app.api.di.rag_di import build_rag_usecase
 from app.api.grpc.v1 import (
     chat_pb2_grpc,
     knowledge_file_pb2_grpc,
     multi_tenant_chatbot_pb2_grpc,
+    rag_pb2_grpc,
 )
 from app.api.grpc.v1.chat_servicer import ChatServicer
 from app.api.grpc.v1.knowledge_file_servicer import KnowledgeFileGrpcServicer
 from app.api.grpc.v1.multi_tenant_chatbot_service import ChatbotGrpcService
-from app.api.v1.deps import (
-    get_chunker_service,
-    get_embedder_service,
-    get_parser_service,
-)
-from app.core.mongodb import get_mongodb_database
-from app.core.pinecone import get_pinecone_index
-from app.infrastructure.persistence.mongodb.document_repository import (
-    MongoDocumentRepository,
-)
-from app.infrastructure.persistence.vector_store.pinecone_repository import (
-    PineconeRepository,
-)
-from app.usecases.generate_answer import GenerateAnswerUseCase
-from app.usecases.upload_chunk_file import UploadChunkFileUseCase
+from app.api.grpc.v1.rag_servicer import RagGrpcServicer
 
 logger = logging.getLogger("uvicorn")
 
 # TODO: ใช้ตอน mTLS
 # BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # CERTS_DIR = os.path.join(BASE_DIR, "certs")
-
-
-class GenerateAnswerDict(TypedDict):
-    generateAnswerUsecase: GenerateAnswerUseCase
-    uploadChunkFileUsecase: UploadChunkFileUseCase
-
-
-def build_generate_answer_usecase() -> GenerateAnswerDict:
-    """
-    Factory Function สำหรับดึง Connection / Config มาประกอบเป็น UseCase
-    เหมือนกับที่ get_generate_answer_usecase() ใน deps.py ทำ
-    """
-    mongo_repo = MongoDocumentRepository(database=get_mongodb_database())
-    pinecone_repo = PineconeRepository(pc_index=get_pinecone_index())
-    embedder_service = get_embedder_service()
-    parser_service = get_parser_service()
-    chunker_service = get_chunker_service()
-
-    return {
-        "generateAnswerUsecase": GenerateAnswerUseCase(
-            vector_repo=pinecone_repo,
-            mongo_repo=mongo_repo,
-            embedder=embedder_service,
-            llm=parser_service,
-        ),
-        "uploadChunkFileUsecase": UploadChunkFileUseCase(
-            mongo_repo=mongo_repo,
-            pinecone_repo=pinecone_repo,
-            parser_service=parser_service,
-            embedder_service=embedder_service,
-            chunker_service=chunker_service,
-        ),
-    }
 
 
 async def start_grpc_server(
@@ -84,6 +39,7 @@ async def start_grpc_server(
     """
     server = grpc.aio.server()
 
+    # Generate Answer
     di = build_generate_answer_usecase()
     chat_usecase = di["generateAnswerUsecase"]
     upload_chunk_file = di["uploadChunkFileUsecase"]
@@ -107,6 +63,7 @@ async def start_grpc_server(
         chatbot_servicer, server
     )
 
+    # Knowledge file
     knowledge_file_usecase = build_knowledge_file_usecase()
     knowledge_file_servicer = KnowledgeFileGrpcServicer(
         process_ingest_use_case=knowledge_file_usecase["createKnowledgeDocUseCase"],
@@ -117,6 +74,13 @@ async def start_grpc_server(
     knowledge_file_pb2_grpc.add_KnowledgeFileServiceServicer_to_server(
         knowledge_file_servicer, server
     )
+
+    # Rag
+    rag_usecase = build_rag_usecase()
+    rag_servicer = RagGrpcServicer(
+        search_similar_use_case=rag_usecase["ragSearchSimilarUseCase"]
+    )
+    rag_pb2_grpc.add_RagServiceServicer_to_server(rag_servicer, server)
     # 4. โหลด Credentials สำหรับ mTLS
     # root_ca = load_file(ca_cert_path)
     # server_key = load_file(server_key_path)

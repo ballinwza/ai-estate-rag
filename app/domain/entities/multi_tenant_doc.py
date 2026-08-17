@@ -2,7 +2,6 @@
 # Chat history
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -87,4 +86,9 @@ class MetadataVectorRecord(BaseModel):
 class VectorRecord(BaseModel):
     id: str | None = None
     values: list[float]
-    metadata: MetadataVectorRecord | dict[str, Any]
+    metadata: MetadataVectorRecord
+
+
+class SearchVectorRecordItem(BaseModel):
+    score: float
+    record: VectorRecord
