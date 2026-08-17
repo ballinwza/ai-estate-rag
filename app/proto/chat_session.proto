@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package chat_session.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// Service สำหรับจัดการ Chat Session และ Chat Message
+service ChatSessionService {
+  // สร้าง Session การสนทนาใหม่
+  rpc CreateChatSession (CreateChatSessionRequest) returns (CreateChatSessionResponse);
+
+  // ดึงข้อมูล Session พร้อมประวัติการคุยตาม ID
+  rpc GetChatSession (GetChatSessionRequest) returns (GetChatSessionResponse);
+
+  // ดึงรายการ Chat Sessions ของผู้ใช้ (รองรับ Filter ตาม chatbot_id และ Pagination)
+  rpc ListChatSessions (ListChatSessionsRequest) returns (ListChatSessionsResponse);
+
+  // บันทึกข้อความใหม่ลงใน Session
+  rpc AddChatMessage (AddChatMessageRequest) returns (AddChatMessageResponse);
+
+  // ลบ Chat Session
+  rpc DeleteChatSession (DeleteChatSessionRequest) returns (google.protobuf.Empty);
+}
+
+// ==============================================================================
+// ENUMS & ENTITIES
+// ==============================================================================
+
+// บทบาทของผู้ส่งข้อความ
+enum MessageRole {
+  MESSAGE_ROLE_UNSPECIFIED = 0;
+  USER = 1;
+  AI = 2;
+  SYSTEM = 3;
+}
+
+// โครงสร้างข้อความสนทนา
+message ChatMessage {
+  MessageRole role = 1;
+  string content = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+// โครงสร้างประวัติการสนทนา (Session)
+message ChatSession {
+  string id = 1;                           // MongoDB _id
+  string user_id = 2;                      // Owner/Tenant ID
+  string chatbot_id = 3;                   // Chatbot ID ที่คุยด้วย
+  string session_title = 4;                // หัวข้อสนทนา
+  repeated ChatMessage messages = 5;       // รายการข้อความใน Session
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// ==============================================================================
+// REQUESTS & RESPONSES
+// ==============================================================================
+
+// 1. Create Session
+message CreateChatSessionRequest {
+  string user_id = 1;       // Required
+  string chatbot_id = 2;    // Required
+  string session_title = 3; // Optional (ถ้าไม่ส่ง ให้ default เป็น "New Chat")
+}
+
+message CreateChatSessionResponse {
+  ChatSession session = 1;
+}
+
+// 2. Get Session
+message GetChatSessionRequest {
+  string id = 1;            // Session ID (Required)
+  string user_id = 2;       // User ID สำหรับ Multi-tenant validation (Required)
+}
+
+message GetChatSessionResponse {
+  ChatSession session = 1;
+}
+
+// 3. List Sessions
+message ListChatSessionsRequest {
+  string user_id = 1;       // Required
+  string chatbot_id = 2;    // Optional: สำหรับกรองเฉพาะ Chatbot ตัวที่กำหนด
+  int32 page_size = 3;      // Limit (Default เช่น 20)
+  int32 page_token = 4;     // Offset
+}
+
+message ListChatSessionsResponse {
+  repeated ChatSession sessions = 1;
+  int32 total_count = 2;
+}
+
+// 4. Add Message
+message AddChatMessageRequest {
+  string session_id = 1;    // Required
+  string user_id = 2;       // Required ( Multi-tenant protection )
+  MessageRole role = 3;     // Required (USER, AI, SYSTEM)
+  string content = 4;      // Required
+}
+
+message AddChatMessageResponse {
+  ChatMessage message = 1;  // ข้อความที่เพิ่งบันทึกสำเร็จ
+}
+
+// 5. Delete Session
+message DeleteChatSessionRequest {
+  string id = 1;            // Session ID (Required)
+  string user_id = 2;       // User ID สำหรับ Multi-tenant validation (Required)
+}

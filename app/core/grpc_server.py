@@ -3,17 +3,20 @@ import logging
 import grpc
 import grpc.aio
 
+from app.api.di.chat_session_di import build_chat_session_usecases
 from app.api.di.chatbot_di import build_chatbot_usecases
 from app.api.di.generate_answer_di import build_generate_answer_usecase
 from app.api.di.knowledge_file_di import build_knowledge_file_usecase
 from app.api.di.rag_di import build_rag_usecase
 from app.api.grpc.v1 import (
     chat_pb2_grpc,
+    chat_session_pb2_grpc,
     knowledge_file_pb2_grpc,
     multi_tenant_chatbot_pb2_grpc,
     rag_pb2_grpc,
 )
 from app.api.grpc.v1.chat_servicer import ChatServicer
+from app.api.grpc.v1.chat_session_servicer import ChatSessionGrpcService
 from app.api.grpc.v1.knowledge_file_servicer import KnowledgeFileGrpcServicer
 from app.api.grpc.v1.multi_tenant_chatbot_service import ChatbotGrpcService
 from app.api.grpc.v1.rag_servicer import RagGrpcServicer
@@ -81,6 +84,20 @@ async def start_grpc_server(
         search_similar_use_case=rag_usecase["ragSearchSimilarUseCase"]
     )
     rag_pb2_grpc.add_RagServiceServicer_to_server(rag_servicer, server)
+
+    # Chat session
+    chat_session_usecase = build_chat_session_usecases()
+    chachat_session_servicer = ChatSessionGrpcService(
+        create_session_usecase=chat_session_usecase["create_session_use_case"],
+        get_chat_history_usecase=chat_session_usecase["get_history_use_case"],
+        get_session_usecase=chat_session_usecase["get_session_use_case"],
+        list_sessions_usecase=chat_session_usecase["get_list_session_use_case"],
+        add_message_usecase=chat_session_usecase["add_message_use_case"],
+        delete_session_usecase=chat_session_usecase["delete_message_use_case"],
+    )
+    chat_session_pb2_grpc.add_ChatSessionServiceServicer_to_server(
+        chachat_session_servicer, server
+    )
     # 4. โหลด Credentials สำหรับ mTLS
     # root_ca = load_file(ca_cert_path)
     # server_key = load_file(server_key_path)
