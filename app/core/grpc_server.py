@@ -21,7 +21,7 @@ from app.api.grpc.v1.knowledge_file_servicer import KnowledgeFileGrpcServicer
 from app.api.grpc.v1.multi_tenant_chatbot_service import ChatbotGrpcService
 from app.api.grpc.v1.rag_servicer import RagGrpcServicer
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("grpc")
 
 # TODO: ใช้ตอน mTLS
 # BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -18,7 +18,7 @@ from app.usecases.multi_tenant.chat_session_usecase import (
     ListUserChatSessionsUseCase,
 )
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("grpc")
 
 
 # ==============================================================================
