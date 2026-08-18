@@ -1,0 +1,20 @@
+# .dockerignore
+.git
+.gitignore
+.venv
+venv
+ENV
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+.vscode
+.idea
+*.md
+docker-compose*.yml
+Dockerfile*
+.env

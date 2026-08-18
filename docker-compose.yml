@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  grpc-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grpc_python_service
+    restart: unless-stopped
+    ports:
+      # Map พอร์ต 8000 จากภายนอกเข้าเครื่องเข้าพอร์ต 8000 ใน Container
+      - "8000:8000"
+    env_file:
+      - .env

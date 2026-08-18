@@ -1,6 +1,4 @@
 # Web Framework & Server
-fastapi
-uvicorn[standard]
 pydantic
 pydantic-settings
 python-multipart

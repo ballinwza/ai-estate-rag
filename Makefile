@@ -22,3 +22,9 @@ clean:
 
 # สั่ง Clean แล้ว Compile ใหม่ทันที
 rebuild: clean proto
+
+compose-up:
+	docker-compose up --build
+
+compose-down:
+	docker-compose down -v

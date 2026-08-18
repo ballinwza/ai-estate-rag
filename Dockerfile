@@ -1,47 +1,57 @@
+# ==========================================
 # --- Stage 1: Build dependencies ---
+# ==========================================
 FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ \
+# ติดตั้ง C/C++ compiler สำหรับ tiktoken, grpcio และ C-extensions อื่นๆ
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+# ติดตั้งลง /usr/local โดยตรงใน Builder stage
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
+
+# ==========================================
 # --- Stage 2: Final Runtime ---
-FROM python:3.11-slim
+# ==========================================
+FROM python:3.11-slim AS runner
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-# ติดตั้ง runtime dependencies ที่จำเป็น (เช่น git)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# 1. ก๊อปปี้ Installed Packages & Executables มาจาก Builder แบบ 1:1
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# คัดลอก wheels และ requirements มาจาก Builder Stage
-COPY --from=builder /app/wheels /app/wheels
-COPY --from=builder /app/requirements.txt .
+# 2. ทำความสะอาด site-packages เพื่อลดขนาด Image (ลบ test files & cache)
+RUN find /usr/local/lib/python3.11/site-packages/ -type d \( -name "tests" -o -name "test" \) -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr/local/lib/python3.11/site-packages/ -name "*.pyc" -delete
 
-# ติดตั้ง packages จาก Wheels และลบไฟล์ wheels ทิ้งเพื่อลดขนาด Image
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir /app/wheels/* \
-    && rm -rf /app/wheels
-
-# สร้าง Non-root user เพื่อความปลอดภัย (Best Practice สำหรับ Security)
+# 3. สร้าง Non-root user
 RUN useradd -m -u 1000 appuser
 
-# คัดลอก ซอร์สโค้ด และกำหนดสิทธิ์ (Ownership) ให้ appuser
+# 4. คัดลอก ซอร์สโค้ด
 COPY --chown=appuser:appuser . /app
 
-# ปรับ สิทธิ์ให้ entrypoint.sh ให้สามารถรันได้
-RUN chmod +x /app/entrypoint.sh
+# ให้สิทธิ์ entrypoint (ถ้ามี)
+RUN if [ -f /app/entrypoint.sh ]; then chmod +x /app/entrypoint.sh; fi
 
-# สลับไปใช้ Non-root user
 USER appuser
 
 EXPOSE 8000
 
 CMD ["python", "main.py"]
-# ENTRYPOINT ["./entrypoint.sh"]

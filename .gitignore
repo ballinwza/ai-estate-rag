@@ -239,3 +239,8 @@ override.tf.json
 terraform.rc
 *.terraform.lock.**
 *.terraform.lock.hcl
+
+# Key
+app/core/certs/*.key
+app/core/certs/*.srl
+app/core/certs/*.csr
