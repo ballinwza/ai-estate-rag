@@ -98,7 +98,7 @@ class PineconeRepository:
     ) -> None:
         """
         ลบ Vectors ทั้งหมดที่ตรงกับ file_id ออกจาก Pinecone
-        โดยใช้ Metadata Filtering หรือ Namespace เพื่อความปลอดภัยในระดับ Multi-tenant Isolation[cite: 1, 2, 3]
+        โดยใช้ Metadata Filtering หรือ Namespace เพื่อความปลอดภัยในระดับ Multi-tenant Isolation
         """
         try:
             namespace = f"tenant_{user_id}_{chatbot_id}"
@@ -112,6 +112,15 @@ class PineconeRepository:
                 filter_query["chatbot_id"] = {"$eq": chatbot_id}
 
             self.index.delete(filter=filter_query, namespace=namespace)
+
+            # Delete empty namespace
+            stats = self.index.describe_index_stats()
+            ns_stats = stats.get("namespaces", {}).get(namespace, {})
+            vector_count = ns_stats.get("vector_count", 0)
+
+            if vector_count == 0:
+                self.index.delete(delete_all=True, namespace=namespace)
+                logger.info(f"Namespace {namespace} is empty and has been deleted.")
 
             logger.info(
                 f"Successfully deleted vectors for file_id: {file_id} (user_id: {user_id})"
